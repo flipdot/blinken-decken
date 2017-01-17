@@ -1,183 +1,137 @@
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
 #include <FastLED.h>
-
-#define NUM_LEDS 280
-#define NUM_KASTEN 6
-#define DATA_PIN D3
+#define NUM_LEDS 49
+#define DATA_PIN 2
 #define BAUDRATE 115200
 
-#define PIN D3
+// Wolfram Rule
+// http://mathworld.wolfram.com/images/eps-gif/ElementaryCARule030_1000.gif
+//uint8_t RULE = 0;
+uint8_t RULE = 30;
+//uint8_t RULE = 16;
 
-#include <ESP8266WiFi.h>
-
-const char* ssid     = "security-by-obscurity";
-const char* password = "LOL DAS SCHREIB ICH DOCH NICHT AUF GITHUB";
-
-const char prefix[] = {0x66, 0x6c, 0x70, 0x64, 0x74};
-char buffer[sizeof(prefix)]; // buffer for receiving prefix data; needs to be at least 3 chars
-
-WiFiServer server(42);
-int state;
-int currentLED;
-#define STATE_WAITING   1    // - Waiting for prefix
-#define STATE_DO_PREFIX 2    // - Processing prefix
-#define STATE_DO_DATA   3    // - Handling incoming LED colors
-
-// Adafruit_NeoPixel strip = Adafruit_NeoPixel(280, PIN, NEO_GRB + NEO_KHZ800);
+CHSV last_hsvs[NUM_LEDS];
 CHSV hsvs[NUM_LEDS];
+
+CRGB last_rgbs[NUM_LEDS];
+CRGB rgbs[NUM_LEDS];
+
 CRGB leds[NUM_LEDS];
 
-uint8_t kasten_position[] = {0, 32, 61, 106, 149, 179}; //, 280};
-uint8_t kasten_sat[] = {255, 255, 255, 255, 255, 255};
-uint8_t kasten_hue[] = {
-    (uint8_t) random(0, 256),
-    (uint8_t) random(0, 256),
-    (uint8_t) random(0, 256),
-    (uint8_t) random(0, 256),
-    (uint8_t) random(0, 256),
-    (uint8_t) random(0, 256)
-};
+uint8_t direction = 1;
 
-void animation_rainbow() {
-    static uint8_t k = 0;
+// JOnas Cyan
+#define COLOR1 CRGB(0, 121, 64)
+#define COLOR2 CRGB(9, 223, 118)
 
-    for (int i = 0; i < NUM_LEDS; i++) {
-        leds[i] = CHSV((i + k) % 256, 255, 255);
-    }
+#define COLOR1_HIGHLIGHT CRGB(0, 0, 255)
+#define COLOR2_HIGHLIGHT CRGB(255, 0, 0)
 
-    k++;
-}
+uint8_t constColor[3] = {0, 121, 64};
 
-void animation_kasten_hue() {
-    uint8_t hue;
-    uint8_t sat;
-    uint8_t k = 0;
+// #define COLOR1 CRGB(255, 80, 80);
+// #define COLOR2 CRGB(80, 80, 255);
 
-    for (int i = 0; i < NUM_LEDS; i++) {
-        if (k < NUM_KASTEN && i == kasten_position[k]) {
-            hue = kasten_hue[k];
-            sat = kasten_sat[k];
-
-            if (sat < 255) {
-                if (sat < 250) {
-                    sat += 3;
-                } else {
-                    sat = 255;
-                }
-            }
-
-            hue += random(0, 2);
-            kasten_hue[k] = hue;
-            kasten_sat[k] = sat;
-            k++;
+void random_initialize_rgbs() {
+    for (int i=0; i<NUM_LEDS; i++) {
+        if (random(100) < 10) {
+            rgbs[i] = COLOR1;
+        } else {
+            rgbs[i] = COLOR2;
         }
-
-        leds[i] = CHSV(hue, sat, 255);
     }
 }
 
-//void animation_kasten_blink() {
-//    uint8_t hue = 0;
-//    uint8_t k = 0;
-//    for (int i = 0; i < NUM_LEDS; i++) {
-//        if (i == 0 || (k >= 0 && k < (int) sizeof(kasten_position) && i == kasten_position[k])) {
-//            hue = random(0, 256);
-//            kasten_hue[k] = hue;
-//            k++;
-//            // this might be faster compared to modulo
-//            if (k > sizeof(kasten_hue)) {
-//                k = 0;
-//            }
-//        }
-//        leds[i] = CHSV(hue, 255, 255);
-//    }
-//    delay(1000);
-//}
-
-void white_random_kasten() {
-    uint8_t k = random(0, NUM_KASTEN);
-    kasten_sat[k] = 0;
+void random_flip_rgb() {
+    for (int i=0; i<random(4); i++) {
+        int j = random(NUM_LEDS);
+        rgbs[j] = random(10) > 5 ? COLOR1_HIGHLIGHT : COLOR2_HIGHLIGHT;
+    }
+    return;
 }
 
-void idle_animation() {
-    animation_kasten_hue();
-    if (random(0, 256) > 253) {
-        white_random_kasten();
+void fade_to_constant() {
+    for (int i=0; i<NUM_LEDS; i++) {
+        for (int j=0; j<sizeof(constColor); j++) {
+            int x = rgbs[i][j];
+            if (x < constColor[j]) {
+                x += random(3);
+            } else if (x > constColor[j]) {
+                x -= random(3);
+            }
+            rgbs[i][j] = x;
+        }
+    }
+}
+
+void show() {
+    memcpy(last_rgbs, rgbs, sizeof(rgbs));
+    for (int i=0; i < NUM_LEDS; i++) {
+        // leds[i] = CRGB(hsvs[i]);
+        leds[i] = rgbs[i];
     }
     FastLED.show();
-    delay(100);
+}
+
+void wolfram_iteration() {
+    for (int i=0; i<NUM_LEDS; i++) {
+        int n = 0;
+        int next = i + 1;
+        int last = i - 1;
+        if (next == NUM_LEDS) {
+            next = 0;
+        }
+        if (last == -1) {
+            last = NUM_LEDS - 1;
+        }
+
+        n |= last_rgbs[next][0] != 0 ? 1 : 0;
+        n |= last_rgbs[i][0] != 0 ? 0b10 : 0;
+        n |= last_rgbs[last][0] != 0 ? 0b100 : 0;
+
+        if ((RULE >> n) & 1 == 1) {
+            rgbs[i] = COLOR1;
+        } else {
+            rgbs[i] = COLOR2;
+        }
+    }
 }
 
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
     Serial.begin(BAUDRATE);
+    random_initialize_rgbs();
     delay(10);
-
-    // We start by connecting to a WiFi network
-
-    Serial.println();
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-
-    /* Explicitly set the ESP8266 to be a WiFi-client, otherwise, it by default,
-       would try to act as both a client and an access-point and could cause
-       network-issues with your other WiFi-devices on your WiFi-network. */
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
-
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-    }
-
-    Serial.println("");
-    Serial.println("WiFi connected");
-    server.begin();
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-    state = STATE_WAITING;
 }
 
 void loop() {
-    switch(state) {
-        case STATE_WAITING:
-            if (Serial.available() > 0) {
-                if (Serial.read() == prefix[0]) {
-                    state = STATE_DO_PREFIX;
-                }
-            }
-            //idle_animation();
-            break;
-        case STATE_DO_PREFIX:
-            if (Serial.available() > sizeof(prefix) - 2) {
-                Serial.readBytes(buffer, sizeof(prefix) - 1);
-
-                for (int i=0; i < sizeof(prefix) - 1; i++) {
-                    if (buffer[i] == prefix[i+1]) {
-                        state = STATE_DO_DATA;
-                        currentLED = 0;
-                    } else {
-                        // something went wront, go back to waiting
-                        state = STATE_WAITING;
-                        break;
-                    }
-                }
-            }
-            break;
-        case STATE_DO_DATA:
-            if (Serial.available() > 2) {
-                Serial.readBytes(buffer, 3);
-                leds[currentLED] = CRGB(buffer[0], buffer[1], buffer[2]);
-                currentLED++;
-            }
-            if (currentLED > NUM_LEDS) {
-                FastLED.show();
-                delay(10);
-                state = STATE_WAITING;
-                currentLED = 0;
-            }
-            break;
+    static uint8_t k = 0;
+    if (k > 50) {
+        random_flip_rgb();
+        //random_initialize_rgbs();
+        //RULE = random(256);
+        k = random(10);
     }
+    // static uint8_t l = 0;
+    // for (int i=0; i < NUM_LEDS; i++) {
+    //     int distance = i - k;
+    //     distance = abs(distance);
+    //     Serial.println(distance);
+    //     float brightness = 255 - distance * 4;
+    //     if (brightness < 0) {
+    //         brightness = 0;
+    //     }
+    //     Serial.println(brightness);
+    //     hsvs[i] = CHSV((50 + ((i+l)*2) % 80), 255, (int) brightness);
+    // }
+    // k += direction;
+    // if (k >= (NUM_LEDS - 1) || k <= 0) {
+    //     direction *= -1;
+    // }
+    // l++;
+    show();
+    //wolfram_iteration();
+    fade_to_constant();
+    k++;
+    delay(100);
 }
