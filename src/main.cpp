@@ -2,7 +2,11 @@
 #include <FastLED.h>
 #define NUM_LEDS 49
 #define DATA_PIN 2
-#define BAUDRATE 115200
+// #define BAUDRATE 115200
+#define BAUDRATE 9600
+
+#define MIN_PPM 600
+#define MAX_PPM 3000
 
 // Wolfram Rule
 // http://mathworld.wolfram.com/images/eps-gif/ElementaryCARule030_1000.gif
@@ -21,20 +25,18 @@ CRGB leds[NUM_LEDS];
 uint8_t direction = 1;
 
 // JOnas Cyan
-#define COLOR1 CRGB(0, 121, 64)
-#define COLOR2 CRGB(9, 223, 118)
+#define COLOR1 CRGB(5, 121, 64)
+#define COLOR2 CRGB(250, 5, 5)
 
-#define COLOR1_HIGHLIGHT CRGB(0, 0, 255)
-#define COLOR2_HIGHLIGHT CRGB(255, 0, 0)
-
-uint8_t constColor[3] = {0, 121, 64};
+uint8_t constColor[3] = {5, 121, 64};
+uint8_t constColorWarn[3] = {250, 5, 5};
 
 // #define COLOR1 CRGB(255, 80, 80);
 // #define COLOR2 CRGB(80, 80, 255);
 
 void random_initialize_rgbs() {
     for (int i=0; i<NUM_LEDS; i++) {
-        if (random(100) < 10) {
+        if (random(100) < 50) {
             rgbs[i] = COLOR1;
         } else {
             rgbs[i] = COLOR2;
@@ -42,22 +44,30 @@ void random_initialize_rgbs() {
     }
 }
 
-void random_flip_rgb() {
-    for (int i=0; i<random(4); i++) {
-        int j = random(NUM_LEDS);
-        rgbs[j] = random(10) > 5 ? COLOR1_HIGHLIGHT : COLOR2_HIGHLIGHT;
-    }
-    return;
-}
+// void random_flip_rgb() {
+//     for (int i=0; i<random(4); i++) {
+//         int j = random(NUM_LEDS);
+//         rgbs[j] = random(10) > 5 ? COLOR1_HIGHLIGHT : COLOR2_HIGHLIGHT;
+//     }
+//     return;
+// }
 
-void fade_to_constant() {
+void fade_to_constant(int warnLed) {
     for (int i=0; i<NUM_LEDS; i++) {
         for (int j=0; j<sizeof(constColor); j++) {
             int x = rgbs[i][j];
-            if (x < constColor[j]) {
-                x += random(3);
-            } else if (x > constColor[j]) {
-                x -= random(3);
+            if (i < warnLed) {
+                if (x < constColorWarn[j]) {
+                    x += random(3);
+                } else if (x > constColorWarn[j]) {
+                    x -= random(3);
+                }
+            } else {
+                if (x < constColor[j]) {
+                    x += random(3);
+                } else if (x > constColor[j]) {
+                    x -= random(3);
+                }
             }
             rgbs[i][j] = x;
         }
@@ -97,6 +107,12 @@ void wolfram_iteration() {
     }
 }
 
+void progress_bar(uint8_t led) {
+    for (int i=0; i<led; i++) {
+        rgbs[i] = CHSV(0, 255, 255);
+    }
+}
+
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
     Serial.begin(BAUDRATE);
@@ -106,11 +122,31 @@ void setup() {
 
 void loop() {
     static uint8_t k = 0;
+    static uint8_t led = 20;
+    static uint8_t step = 1;
+
+    if (Serial.available() > 0) {
+        uint16_t read = Serial.parseInt();
+        if (read > 0) {
+            if (read < MIN_PPM) {
+                read = 0;
+            } else {
+                read = read - MIN_PPM;
+            }
+            float ratio = (float)read / (float)(MAX_PPM - MIN_PPM);
+            led = (uint16_t) (NUM_LEDS * ratio);
+        }
+    }
+
     if (k > 50) {
-        random_flip_rgb();
+        //random_flip_rgb();
         //random_initialize_rgbs();
         //RULE = random(256);
         k = random(10);
+        //led += step;
+        //if (led >= NUM_LEDS || led <= 0) {
+        //    step *= -1;
+        //}
     }
     // static uint8_t l = 0;
     // for (int i=0; i < NUM_LEDS; i++) {
@@ -131,7 +167,8 @@ void loop() {
     // l++;
     show();
     //wolfram_iteration();
-    fade_to_constant();
+    //progress_bar(led);
+    fade_to_constant(led);
     k++;
-    delay(100);
+    delay(10);
 }
