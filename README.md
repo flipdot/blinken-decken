@@ -6,5 +6,7 @@ The Blinken-Kisten consists of one WS2812B strip with 240 LEDs in GRB format dri
 ## Usage
 The code can be built and uploaded using [platformio](http://platformio.org/).
 
+    make upload-small
+
 ## Limitations
 There is currently process time as the Arduino has no internet access.
