@@ -3,3 +3,4 @@
 .pioenvs
 .piolibdeps
 .travis.yml
+.*.sw[op]
