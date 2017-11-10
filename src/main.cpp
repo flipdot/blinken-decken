@@ -1,6 +1,7 @@
-#define FASTLED_ESP8266_RAW_PIN_ORDER
-
 #include <Arduino.h>
+
+#define FASTLED_ESP8266_RAW_PIN_ORDER
+#define FASTLED_ALLOW_INTERRUPTS 0
 #include <FastLED.h>
 
 #include "config.hpp"
@@ -35,12 +36,13 @@ void led_stripe_update(double heartbeat, CRGB buf[], CRGB buf_co2[], CRGB buf_us
     // mix = 0.5 : Display 50% buf_co2 and 50% buf_usr
     // mix =   1 : Display only buf_usr
     double mix = (sin(heartbeat) + 1) / 2;
+    Serial.println(mix);
 
     for (int i = 0; i < size; i++) {
         buf[i] = CRGB(
-            buf_co2[i].r * mix - buf_usr[i].r * (1 - mix),
-            buf_co2[i].g * mix - buf_usr[i].g * (1 - mix),
-            buf_co2[i].b * mix - buf_usr[i].b * (1 - mix)
+            buf_co2[i].r * mix + buf_usr[i].r * (1 - mix),
+            buf_co2[i].g * mix + buf_usr[i].g * (1 - mix),
+            buf_co2[i].b * mix + buf_usr[i].b * (1 - mix)
         );
     }
 
@@ -56,8 +58,6 @@ void setup() {
 }
 
 void loop() {
-    Serial.printf(".");
-
     led_stripe_update(heartbeat, led_buf, led_buf_co2, led_buf_usr, NUM_LEDS);
     delay(FRAME_SLEEP);
 
