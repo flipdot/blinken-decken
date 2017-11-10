@@ -14,12 +14,22 @@ CRGB led_buf[NUM_LEDS];
 
 double heartbeat = 0;
 
-void buf_random(CRGB buf[], size_t size) {
+void buf_random(CRGB buf[], size_t size, CRGB c1, CRGB c2) {
     for (int i = 0; i < size; i++) {
         if (random(100) < 50) {
-            buf[i] = C_CYAN;
+            buf[i] = c1;
         } else {
-            buf[i] = C_RED;
+            buf[i] = c2;
+        }
+    }
+}
+
+void buf_progress_bar(CRGB buf[], size_t size, CRGB c1, CRGB c2, double progress) {
+    for (int i = 0; i < size; i++) {
+        if (i < progress * size) {
+            buf[i] = c1;
+        } else {
+            buf[i] = c2;
         }
     }
 }
@@ -53,11 +63,14 @@ void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(led_buf, NUM_LEDS);
     Serial.begin(BAUDRATE);
 
-    buf_random(led_buf_co2, NUM_LEDS);
+    buf_random(led_buf_co2, NUM_LEDS, C_GREY, C_RED);
     buf_grey(led_buf_usr, NUM_LEDS);
 }
 
 void loop() {
+    double progress = (sin(heartbeat * 3) + 1) / 2;
+    buf_progress_bar(led_buf_co2, NUM_LEDS, C_RED, C_CYAN, progress);
+
     led_stripe_update(heartbeat, led_buf, led_buf_co2, led_buf_usr, NUM_LEDS);
     delay(FRAME_SLEEP);
 
