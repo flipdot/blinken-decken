@@ -1,11 +1,11 @@
-#define NUM_LEDS 49
+#define NUM_LEDS 300
 #define DATA_PIN 2
 #define BAUDRATE 9600
 
 #define MIN_PPM 600
 #define MAX_PPM 3000
 
-#define FRAME_SLEEP 100
+#define FRAME_SLEEP 10
 #define HEARTBEAT_INC 0.01
 
 #define C_CYAN CRGB(5, 121, 64)
