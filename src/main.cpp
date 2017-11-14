@@ -55,6 +55,16 @@ void buf_copy(CRGB buf1[], CRGB buf2[], size_t size) {
     }
 }
 
+void buf_progress_dot(CRGB buf[], size_t size, CRGB c1, CRGB c2, int heartbeat) {
+    for (int i = 0; i < size; i++) {
+        if ((heartbeat + i) % size == 0) {
+            buf[i] = c1;
+        } else {
+            buf[i] = c2;
+        }
+    }
+}
+
 void buf_progress_bar(CRGB buf[], size_t size, CRGB c1, CRGB c2, double progress) {
     for (int i = 0; i < size; i++) {
         if (i < progress * size) {
@@ -104,6 +114,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(led_buf, NUM_LEDS);
     Serial.begin(BAUDRATE);
+    /*
     delay(3000);
 
     // Initialize WiFi connection
@@ -133,11 +144,14 @@ void setup() {
     //        MQTT_TOPIC_USERS);
 
     Serial.println("Setup complete!\n");
+    */
 }
 
 void loop() {
-    double progress = (sin((double)heartbeat / 90) + 1) / 2;
-    buf_progress_bar(led_buf_co2, NUM_LEDS, C_RED, C_CYAN, progress);
+    // double progress = (sin((double)heartbeat / 90) + 1) / 2;
+    // buf_progress_bar(led_buf_co2, NUM_LEDS, C_RED, C_CYAN, progress);
+    buf_progress_dot(led_buf_co2, NUM_LEDS, C_YELLOW, C_BLACK, heartbeat * .23);
+    buf_progress_dot(led_buf_usr, NUM_LEDS, C_RED, C_BLACK, - heartbeat * .4);
 
     led_stripe_update(heartbeat, led_buf, led_buf_co2, led_buf_usr, NUM_LEDS);
 

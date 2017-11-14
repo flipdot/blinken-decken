@@ -5,7 +5,7 @@
 #define MIN_PPM 600
 #define MAX_PPM 3000
 
-#define FRAME_SLEEP 10
+#define FRAME_SLEEP 1
 #define HEARTBEAT_INC 0.01
 
 #define C_CYAN    CRGB(5, 121, 64)
