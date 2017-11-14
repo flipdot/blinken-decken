@@ -8,6 +8,15 @@
 #define FRAME_SLEEP 10
 #define HEARTBEAT_INC 0.01
 
-#define C_CYAN CRGB(5, 121, 64)
-#define C_RED  CRGB(250, 5, 5)
-#define C_GREY CRGB(25, 25, 25)
+#define C_CYAN    CRGB(5, 121, 64)
+#define C_RED     CRGB(250, 5, 5)
+#define C_GREY    CRGB(25, 25, 25)
+#define C_BLACK   CRGB(0, 0, 0)
+#define C_YELLOW  CRGB(245, 198, 0)
+
+#define MQTT_TOPIC_CO2   "sensors/lounge/co2"
+#define MQTT_TOPIC_USERS "sensors/all/users"
+
+constexpr const char* SSID = "~(._.)~";
+constexpr const char* PASSWORD = "w3333333333";
+constexpr const char* MQTT_HOST = "HeikesComputer";
