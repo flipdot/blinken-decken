@@ -150,8 +150,8 @@ void setup() {
 void loop() {
     // double progress = (sin((double)heartbeat / 90) + 1) / 2;
     // buf_progress_bar(led_buf_co2, NUM_LEDS, C_RED, C_CYAN, progress);
-    buf_progress_dot(led_buf_co2, NUM_LEDS, C_YELLOW, C_BLACK, heartbeat * .23);
-    buf_progress_dot(led_buf_usr, NUM_LEDS, C_RED, C_BLACK, - heartbeat * .4);
+    buf_progress_dot(led_buf_co2, NUM_LEDS, C_YELLOW, C_BLACK, heartbeat * .5);
+    buf_progress_dot(led_buf_usr, NUM_LEDS, C_RED, C_BLACK, - heartbeat * .3);
 
     led_stripe_update(heartbeat, led_buf, led_buf_co2, led_buf_usr, NUM_LEDS);
 
